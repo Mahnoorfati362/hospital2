@@ -2,12 +2,18 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from .forms import UserRegisterForm
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login  # ✅ Fix: Importing missing authentication methods
 from django.contrib.auth.models import User, Group
-from django.contrib import messages
 from django.utils.timezone import now, timedelta
 from .models import TemporaryRole
+from users.decorators import role_required
 
+
+def home(request):
+    return render(request, 'home.html')  # Yeh ek simple template render karega
+
+
+# ✅ Assign Temporary Role (Only Super Admin Can Assign)
 def assign_temporary_role(request):
     if not request.user.is_superuser:
         messages.error(request, "You do not have permission to assign temporary roles.")
@@ -29,8 +35,8 @@ def assign_temporary_role(request):
             duration=duration,
             expires_at=now() + duration
         )
-        user.groups.add(role)  # Role assign kar do
-        
+        user.groups.add(role)  # ✅ Role assign
+
         messages.success(request, f"{user.username} assigned {role.name} for {duration_hours} hours!")
         return redirect("dashboard")
 
@@ -38,53 +44,70 @@ def assign_temporary_role(request):
     roles = Group.objects.all()
     return render(request, "users/assign_temporary_role.html", {"users": users, "roles": roles})
 
-
+# ✅ General Dashboard View (Accessible by All Logged-in Users)
 @login_required
 def dashboard_view(request):
-    return render(request, 'users/dashboard.html')  # Dashboard template render karega
+    return render(request, 'users/dashboard.html')
 
+# ✅ Doctor Dashboard (Only Doctors Allowed)
+@login_required
+@role_required(allowed_roles=['doctor'])  # ✅ Fix: Apply role check
+def doctor_dashboard(request):
+    return render(request, 'users/doctor_dashboard.html')
 
+# ✅ Patient Dashboard (Only Patients Allowed)
+@login_required
+@role_required(allowed_roles=['patient'])  # ✅ Fix: Apply role check
+def patient_dashboard(request):
+    return render(request, 'users/patient_dashboard.html')
+
+# ✅ Guardian Dashboard (Only Guardians Allowed)
+@login_required
+@role_required(allowed_roles=['guardian'])  # ✅ Fix: Apply role check
+def guardian_dashboard(request):
+    return render(request, 'users/guardian_dashboard.html')
+
+# ✅ User Login View
 def user_login(request):
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
         user = authenticate(request, username=username, password=password)
+        
         if user is not None:
             login(request, user)
             messages.success(request, "Login successful!")
 
-            # User role ke mutabiq redirect karna
+            # ✅ Redirect Based on User Role
             if user.is_superuser:
-                return redirect("admin_dashboard")  # Admin ka dashboard
-            elif user.groups.filter(name="Doctor").exists():
+                return redirect("admin_dashboard")  # ✅ Ensure this URL exists in `urls.py`
+            elif user.role == "doctor":  # ✅ Checking user.role instead of groups
                 return redirect("doctor_dashboard")
-            elif user.groups.filter(name="Guardian").exists():
+            elif user.role == "guardian":
                 return redirect("guardian_dashboard")
-            elif user.groups.filter(name="Patient").exists():
+            elif user.role == "patient":
                 return redirect("patient_dashboard")
             else:
-                return redirect("home")  # Default Redirect
+                return redirect("dashboard")  # Default Redirect
 
         else:
             messages.error(request, "Invalid username or password")
 
     return render(request, "users/login.html")
 
-
+# ✅ User Registration View
 def register(request):
     if request.method == "POST":
         form = UserRegisterForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.set_password(form.cleaned_data["password1"])  # Password hash karna
+            user.set_password(form.cleaned_data["password1"])  # ✅ Password hashing
             user.save()
             messages.success(request, "Your account has been created! You can now log in.")
-            return redirect("login")  # Login page pe redirect
+            return redirect("login")  # ✅ Redirect to login page
         else:
             messages.error(request, "Please correct the errors below.")
     else:
         form = UserRegisterForm()
 
     return render(request, "users/signup.html", {"form": form})
-
-# Create your views here.

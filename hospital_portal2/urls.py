@@ -14,14 +14,27 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+# from django.contrib import admin
+# from django.urls import path, include
+# from users import views  # Users ke views ko import kar rahe hain
+
+# urlpatterns = [
+#     path('admin/', admin.site.urls),
+#     path('users/', include('users.urls')),  # ✅ Ensure karo users/urls.py properly set ho
+#     path("register/", views.register, name="register"),
+#     path('dashboard/', views.dashboard_view, name='dashboard'),
+#     path("assign_temporary_role/", views.assign_temporary_role, name="assign_temporary_role"),
+#     path('doctor/dashboard/', views.doctor_dashboard, name='doctor_dashboard'),
+#     path('patient/dashboard/', views.patient_dashboard, name='patient_dashboard'),
+#     path('guardian/dashboard/', views.guardian_dashboard, name='guardian_dashboard'),
+# ]
 from django.contrib import admin
-from django.urls import path
-from django.urls import path, include
+from django.urls import path, include  #  `include` ka sahi use karo
+from users.views import home  #  Home view import karein
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('users/', include('users.urls')),
-    path("accounts/", include("django.contrib.auth.urls")),
+    path("admin/", admin.site.urls),  
 
-
+    path('', home, name='home'),  #  Default homepag
+    path("users/", include("users.urls")),  #  Ye line handle karegi users ke saare URLs
 ]
